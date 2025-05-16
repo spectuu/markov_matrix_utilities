@@ -14,7 +14,7 @@ Example:
    Given an initial vector \(\pi_0\), a transition matrix \(P\), and a time \(t\), computes \(\pi_t = \pi_0 P^t\).
 
 Example:  
-![State at time 1](images/Screenshot_2025-05-16_122029.png)  
+![State at time 1](/images/Screenshot_2025-05-16_122029.png)  
 ![State at time 2](images/Screenshot_2025-05-16_122046.png)  
 ![State at time 3](images/Screenshot_2025-05-16_122059.png)
 
