@@ -16,6 +16,7 @@ class MarkovSolverApp:
         ttk.Label(frame_mode, text="Selecciona la operación:").pack(side=tk.LEFT)
         ttk.Radiobutton(frame_mode, text="1. Estado Estable", variable=self.mode_var, value="1").pack(side=tk.LEFT, padx=5)
         ttk.Radiobutton(frame_mode, text="2. Estado en Tiempo t", variable=self.mode_var, value="2").pack(side=tk.LEFT, padx=5)
+        ttk.Radiobutton(frame_mode, text="3. Elevar Matriz P a potencia t", variable=self.mode_var, value="3").pack(side=tk.LEFT, padx=5)
 
         # Área de entrada matriz
         self.label = ttk.Label(root, text="Ingrese matriz de transición (filas separadas por ;, valores por coma):")
@@ -53,6 +54,9 @@ class MarkovSolverApp:
         elif modo == "2":
             self.output.insert(tk.END, "Modo: Calcular estado en tiempo t\n\n")
             self.calcular_estado_en_tiempo(matrix)
+        elif modo == "3":
+            self.output.insert(tk.END, "Modo: Elevar matriz P a potencia t\n\n")
+            self.elevar_matriz_a_potencia(matrix)
         else:
             messagebox.showerror("Error", "Modo no reconocido")
 
@@ -113,7 +117,6 @@ class MarkovSolverApp:
         self.output.insert(tk.END, np.array2string(matrix, formatter={'float_kind':lambda x: f"{x:.4f}"}))
         self.output.insert(tk.END, "\n\n")
 
-        # Pedir vector inicial π0
         vector_str = simpledialog.askstring("Vector inicial", f"Ingrese vector de estado inicial (n={n}, valores separados por comas):")
         if not vector_str:
             self.output.insert(tk.END, "No se ingresó vector inicial.\n")
@@ -132,7 +135,6 @@ class MarkovSolverApp:
 
         self.output.insert(tk.END, f"Vector inicial π0:\n{pi0}\n\n")
 
-        # Pedir tiempo t
         t = simpledialog.askinteger("Tiempo t", "Ingrese el tiempo t (entero >=0):", minvalue=0)
         if t is None:
             self.output.insert(tk.END, "No se ingresó tiempo t.\n")
@@ -140,16 +142,30 @@ class MarkovSolverApp:
 
         self.output.insert(tk.END, f"Tiempo t = {t}\n\n")
 
-        # Elevar matriz a la potencia t
         Pt = np.linalg.matrix_power(matrix, t)
         self.output.insert(tk.END, f"Matriz P^{t}:\n")
         self.output.insert(tk.END, np.array2string(Pt, formatter={'float_kind':lambda x: f"{x:.6f}"}))
         self.output.insert(tk.END, "\n\n")
 
-        # Multiplicar vector inicial por P^t
         pit = np.dot(pi0, Pt)
         self.output.insert(tk.END, f"Estado en tiempo t (π0 * P^{t}):\n")
         self.output.insert(tk.END, np.array2string(pit, formatter={'float_kind':lambda x: f"{x:.6f}"}))
+        self.output.insert(tk.END, "\n")
+
+    def elevar_matriz_a_potencia(self, matrix):
+        n = matrix.shape[0]
+        t = simpledialog.askinteger("Tiempo t", "Ingrese el tiempo t para elevar la matriz P^t (entero >=0):", minvalue=0)
+        if t is None:
+            self.output.insert(tk.END, "No se ingresó tiempo t.\n")
+            return
+
+        self.output.insert(tk.END, "Matriz de transición P:\n")
+        self.output.insert(tk.END, np.array2string(matrix, formatter={'float_kind':lambda x: f"{x:.6f}"}))
+        self.output.insert(tk.END, "\n\n")
+
+        self.output.insert(tk.END, f"Matriz P^{t}:\n")
+        Pt = np.linalg.matrix_power(matrix, t)
+        self.output.insert(tk.END, np.array2string(Pt, formatter={'float_kind':lambda x: f"{x:.6f}"}))
         self.output.insert(tk.END, "\n")
 
     def parse_matrix(self, raw):
