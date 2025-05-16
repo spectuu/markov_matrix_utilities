@@ -7,7 +7,7 @@ It provides three main functionalities:
    Solves the system \(\pi P = \pi\) with the normalization condition \(\sum \pi_i = 1\), displaying the solution.
 
 Example:  
-![Steady state example](images/Screenshot_2025-05-16_121913.png)
+![Steady state example](images/Screenshot%202025-05-16%20121913.png)
 
 
 2. **Calculate state at time \(t\)**:  
