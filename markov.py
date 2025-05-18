@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import numpy as np
 import sympy as sp
+from fractions import Fraction
 
 class MarkovSolverApp:
     def __init__(self, root):
@@ -22,9 +23,18 @@ class MarkovSolverApp:
         self.label = ttk.Label(root, text="Ingrese matriz de transición (filas separadas por ;, valores por coma):")
         self.label.pack(padx=10, pady=5)
 
-        self.matrix_entry = tk.Text(root, height=5, width=50)
+        frame_matrix = ttk.Frame(root)
+        frame_matrix.pack(padx=10, pady=5)
+
+        self.matrix_entry = tk.Text(frame_matrix, height=5, width=50)
         self.matrix_entry.insert(tk.END, "0.35,0.6,0.05;\n0.3,0.6,0.1;\n0.25,0.4,0.35")
-        self.matrix_entry.pack(padx=10, pady=5)
+        self.matrix_entry.pack(side=tk.LEFT)
+
+        # Spinbox para decimales
+        self.decimals_var = tk.IntVar(value=4)
+        ttk.Label(frame_matrix, text="Decimales:").pack(side=tk.LEFT, padx=(10,0))
+        self.decimals_spin = tk.Spinbox(frame_matrix, from_=2, to=10, width=3, textvariable=self.decimals_var)
+        self.decimals_spin.pack(side=tk.LEFT, padx=(2,0))
 
         # Botón para ejecutar
         self.solve_button = ttk.Button(root, text="Ejecutar", command=self.execute)
@@ -62,13 +72,16 @@ class MarkovSolverApp:
 
     def calcular_estado_estable(self, matrix):
         n = matrix.shape[0]
+        dec = self.decimals_var.get()
         self.output.insert(tk.END, "Matriz de transición P:\n")
-        self.output.insert(tk.END, np.array2string(matrix, formatter={'float_kind':lambda x: f"{x:.4f}"}))
+        self.output.insert(tk.END, np.array2string(matrix, formatter={'float_kind':lambda x: f"{x:.{dec}f}"}))
         self.output.insert(tk.END, "\n\n")
+
+        # Redondear la matriz a dec decimales para mostrar en ecuaciones simbólicas
+        P = sp.Matrix([[sp.Float(val, dec) for val in row] for row in matrix])
 
         pi_syms = sp.symbols(f'π1:{n+1}')
         pi = sp.Matrix(pi_syms)
-        P = sp.Matrix(matrix)
 
         self.output.insert(tk.END, "Planteamos el sistema π * P = π:\n")
         eqs = []
@@ -105,16 +118,17 @@ class MarkovSolverApp:
         sol = list(sol)[0]
         self.output.insert(tk.END, "Solución:\n")
         for i, val in enumerate(sol):
-            self.output.insert(tk.END, f"π{i+1} = {sp.N(val, 6)}\n")
+            self.output.insert(tk.END, f"π{i+1} = {sp.N(val, dec):.{dec}f}\n")
 
         self.output.insert(tk.END, "\nVector estado estable π:\n[")
-        self.output.insert(tk.END, ", ".join(f"{sp.N(v,6):.6f}" for v in sol))
+        self.output.insert(tk.END, ", ".join(f"{sp.N(v,dec):.{dec}f}" for v in sol))
         self.output.insert(tk.END, "]\n")
 
     def calcular_estado_en_tiempo(self, matrix):
         n = matrix.shape[0]
+        dec = self.decimals_var.get()
         self.output.insert(tk.END, "Matriz de transición P:\n")
-        self.output.insert(tk.END, np.array2string(matrix, formatter={'float_kind':lambda x: f"{x:.4f}"}))
+        self.output.insert(tk.END, np.array2string(matrix, formatter={'float_kind':lambda x: f"{x:.{dec}f}"}))
         self.output.insert(tk.END, "\n\n")
 
         vector_str = simpledialog.askstring("Vector inicial", f"Ingrese vector de estado inicial (n={n}, valores separados por comas):")
@@ -127,13 +141,13 @@ class MarkovSolverApp:
                 raise ValueError(f"Vector inicial debe tener {n} elementos.")
             suma = np.sum(pi0)
             if abs(suma - 1) > 1e-6:
-                self.output.insert(tk.END, f"Advertencia: vector inicial no suma 1 (suma={suma:.4f}). Se normalizará.\n")
+                self.output.insert(tk.END, f"Advertencia: vector inicial no suma 1 (suma={suma:.{dec}f}). Se normalizará.\n")
                 pi0 = pi0 / suma
         except Exception as e:
             messagebox.showerror("Error", f"Error al leer vector inicial: {e}")
             return
 
-        self.output.insert(tk.END, f"Vector inicial π0:\n{pi0}\n\n")
+        self.output.insert(tk.END, f"Vector inicial π0:\n{np.array2string(pi0, formatter={'float_kind':lambda x: f'{x:.{dec}f}'})}\n\n")
 
         t = simpledialog.askinteger("Tiempo t", "Ingrese el tiempo t (entero >=0):", minvalue=0)
         if t is None:
@@ -144,28 +158,29 @@ class MarkovSolverApp:
 
         Pt = np.linalg.matrix_power(matrix, t)
         self.output.insert(tk.END, f"Matriz P^{t}:\n")
-        self.output.insert(tk.END, np.array2string(Pt, formatter={'float_kind':lambda x: f"{x:.6f}"}))
+        self.output.insert(tk.END, np.array2string(Pt, formatter={'float_kind':lambda x: f"{x:.{dec}f}"}))
         self.output.insert(tk.END, "\n\n")
 
         pit = np.dot(pi0, Pt)
         self.output.insert(tk.END, f"Estado en tiempo t (π0 * P^{t}):\n")
-        self.output.insert(tk.END, np.array2string(pit, formatter={'float_kind':lambda x: f"{x:.6f}"}))
+        self.output.insert(tk.END, np.array2string(pit, formatter={'float_kind':lambda x: f"{x:.{dec}f}"}))
         self.output.insert(tk.END, "\n")
 
     def elevar_matriz_a_potencia(self, matrix):
         n = matrix.shape[0]
+        dec = self.decimals_var.get()
         t = simpledialog.askinteger("Tiempo t", "Ingrese el tiempo t para elevar la matriz P^t (entero >=0):", minvalue=0)
         if t is None:
             self.output.insert(tk.END, "No se ingresó tiempo t.\n")
             return
 
         self.output.insert(tk.END, "Matriz de transición P:\n")
-        self.output.insert(tk.END, np.array2string(matrix, formatter={'float_kind':lambda x: f"{x:.6f}"}))
+        self.output.insert(tk.END, np.array2string(matrix, formatter={'float_kind':lambda x: f"{x:.{dec}f}"}))
         self.output.insert(tk.END, "\n\n")
 
         self.output.insert(tk.END, f"Matriz P^{t}:\n")
         Pt = np.linalg.matrix_power(matrix, t)
-        self.output.insert(tk.END, np.array2string(Pt, formatter={'float_kind':lambda x: f"{x:.6f}"}))
+        self.output.insert(tk.END, np.array2string(Pt, formatter={'float_kind':lambda x: f"{x:.{dec}f}"}))
         self.output.insert(tk.END, "\n")
 
     def parse_matrix(self, raw):
@@ -173,7 +188,16 @@ class MarkovSolverApp:
         matrix = []
         for r in rows:
             if r.strip():
-                row_vals = [float(x.strip()) for x in r.strip().split(',')]
+                row_vals = []
+                for x in r.strip().split(','):
+                    val = x.strip()
+                    try:
+                        # Intenta como fracción primero
+                        num = float(Fraction(val))
+                    except Exception:
+                        # Si falla, intenta como decimal
+                        num = float(val)
+                    row_vals.append(num)
                 matrix.append(row_vals)
         matrix = np.array(matrix)
         return matrix
